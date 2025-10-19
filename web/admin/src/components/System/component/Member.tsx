@@ -8,7 +8,7 @@ import { Table } from '@ctzhian/ui';
 import { ColumnType } from '@ctzhian/ui/dist/Table';
 import { Box, Button, Stack, Tooltip } from '@mui/material';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import MemberAdd from './MemberAdd';
 import MemberDelete from './MemberDelete';
 import MemberUpdate from './MemberUpdate';
@@ -26,6 +26,9 @@ const Member = () => {
   const [curType, setCurType] = useState<'delete' | 'reset-password' | null>(
     null,
   );
+  const adminCount = useMemo(() => {
+    return userList.filter(item => item.role === ConstsUserRole.UserRoleAdmin).length;
+  }, [userList]);
 
   const columns: ColumnType<V1UserListItemResp>[] = [
     {
@@ -220,7 +223,7 @@ const Member = () => {
         <Box sx={{ fontSize: 14, lineHeight: '24px', fontWeight: 'bold' }}>
           用户管理
         </Box>
-        <MemberAdd refresh={getData} userLen={userList.length} />
+        <MemberAdd refresh={getData} adminCount={adminCount} />
       </Stack>
       <Table
         columns={columns}

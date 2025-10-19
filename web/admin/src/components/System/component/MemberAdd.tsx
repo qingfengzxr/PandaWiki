@@ -30,14 +30,14 @@ const VERSION_MAP = {
     message: '联创版最多支持 3 个管理员',
     max: 3,
   },
-};
+} satisfies Partial<Record<ConstsLicenseEdition, { message: string; max: number }>>;
 
 const MemberAdd = ({
   refresh,
-  userLen,
+  adminCount,
 }: {
   refresh: () => void;
-  userLen: number;
+  adminCount: number;
 }) => {
   const [addMember, setAddMember] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -89,6 +89,13 @@ const MemberAdd = ({
   };
 
   const onSubmit = handleSubmit(data => {
+    const versionLimit =
+      VERSION_MAP[license.edition as keyof typeof VERSION_MAP];
+    if (data.role === 'admin' && versionLimit && adminCount >= versionLimit.max) {
+      message.error(versionLimit.message);
+      return;
+    }
+
     setLoading(true);
     const password = generatePassword();
     const onSuccess = () => {
@@ -124,12 +131,6 @@ const MemberAdd = ({
         size='small'
         variant='outlined'
         onClick={() => {
-          const versionLimit =
-            VERSION_MAP[license.edition as keyof typeof VERSION_MAP];
-          if (versionLimit && userLen >= versionLimit.max) {
-            message.error(versionLimit.message);
-            return;
-          }
           setAddMember(true);
         }}
       >

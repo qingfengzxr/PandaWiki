@@ -59,16 +59,15 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *domain.User, edit
 	}
 	user.Password = string(hashedPassword)
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if edition == consts.LicenseEditionContributor || edition == consts.LicenseEditionFree {
+		limit, limited, message := licenseUserLimit(edition, user.Role)
+		if limited {
 			var count int64
-			if err := tx.Model(&domain.User{}).Count(&count).Error; err != nil {
+			query := tx.Model(&domain.User{}).Where("role = ?", user.Role)
+			if err := query.Count(&count).Error; err != nil {
 				return err
 			}
-			if edition == consts.LicenseEditionFree && count >= 1 {
-				return errors.New("free edition only allows 1 user")
-			}
-			if edition == consts.LicenseEditionContributor && count >= 5 {
-				return errors.New("contributor edition only allows 5 user")
+			if count >= limit {
+				return errors.New(message)
 			}
 		}
 		if err := tx.Create(user).Error; err != nil {
@@ -76,6 +75,21 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *domain.User, edit
 		}
 		return nil
 	})
+}
+
+func licenseUserLimit(edition consts.LicenseEdition, role consts.UserRole) (limit int64, limited bool, message string) {
+	switch role {
+	case consts.UserRoleAdmin:
+		switch edition {
+		case consts.LicenseEditionFree:
+			return 1, true, "free edition only allows 1 admin"
+		case consts.LicenseEditionContributor:
+			return 3, true, "contributor edition only allows 3 admins"
+		}
+	default:
+		// no limit for non-admin users in current editions
+	}
+	return 0, false, ""
 }
 
 func (r *UserRepository) VerifyUser(ctx context.Context, account string, password string) (*domain.User, error) {
